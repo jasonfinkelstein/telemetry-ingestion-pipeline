@@ -1,0 +1,43 @@
+defaults:
+  db_url: postgresql://localhost:5432/telemetry_db
+  batch_size: 5000
+  on_conflict: append
+
+sources:
+  - name: verstappen_telemetry_miami_2024
+    type: csv
+    path: /data/telemetry/verstappen_miami_2024.csv
+    target_table: stg_telemetry
+    pk: [] # No primary key - telemetry is time-series data
+
+# Column types:
+schema:
+  Date: datetime
+  RPM: int
+  Speed: int
+  nGear: int
+  Throttle: int
+  Brake: bool
+  DRS: int
+  Source: str
+  Time: str
+  SessionTime: str
+
+# Validation rules using pandas syntax
+rules:
+  - rule: "RPM >= 0"
+    message: "RPM must be non-negative"
+  - rule: "RPM <= 20000"
+    message: "RPM exceeds F1 maximum (20,000)"
+  - rule: "Speed >= 0"
+    message: "Speed must be non-negative"
+  - rule: "Speed <= 400"
+    message: "Speed exceeds F1 maximum (400 km/h)"
+  - rule: "Throttle >= 0"
+    message: "Throttle must be non-negative"
+  - rule: "Throttle <= 100"
+    message: "Throttle must be 0-100%"
+  - rule: "nGear >= 0"
+    message: "Gear must be non-negative"
+  - rule: "nGear <= 8"
+    message: "F1 cars have max 8 gears"
