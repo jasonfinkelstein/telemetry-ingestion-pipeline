@@ -1,0 +1,124 @@
+import psycopg
+from psycopg import sql
+import pandas as pd
+from typing import List, Optional
+import logging
+from contextlib import contextmanager
+
+logger = logging.getLogger(__name__)
+
+@contextmanager
+def get_db_connection(db_url: str):
+    """
+    Context manager for database connections.
+
+    Usage:
+        with get_db_connection(db_url) as conn:
+            # use connection
+            cursor.execute("SELECT * FROM table")
+            # connection automatically closed after block
+
+    Ensures:
+        - Connection is always closed (even on errors)
+        - Transaction is committed on success and rolled back on failure
+
+    Args:
+        db_url: PostgreSQL connection string
+
+    Yields:
+        psycopg Connection object    
+    """
+
+    conn = None
+
+    try:
+        # Establish connection
+        conn = psycopg.connect(db_url)
+        logger.info("Database connection established")
+
+        # Yield connection to caller
+        yield conn
+
+        # Commit transaction if no error occurred
+        conn.commit()
+        logger.info("Transaction committed successfully")
+
+    except Exception as e:
+        # Error occurred, rollback transaction
+        if conn:
+            conn.rollback()
+            logger.error(f"Transaction rolled back due to error: {str(e)}")
+        raise # Re-raise exception after rollback
+
+    finally:
+        # Ensure connection is closed
+        if conn:
+            conn.close()
+            logger.info("Database connection closed")
+
+
+def load_dataframe(
+        df: pd.DataFrame,
+        table: str,
+        db_url: str,
+        batch_size: int = 5000
+) -> dict:
+    """
+    Load DataFrame into PostgreSQL table using batch INSERT.
+
+    Process:
+    1. Build INSERT query
+    2. Convert DataFrame rows to list of tuples
+    3. Execute in batches (default 5000 rows per batch)
+    4. Track progress
+
+    Args:
+        df: Dataframe to load (already cleaned and validated)
+        table: Target table name (e.g. 'stg_telemetry')
+        db_url: PostgreSQL connection string
+        batch_size: Number of rows to insert per batch (larger = faster, but more memory)
+
+    Returns:
+        Dict with load statistics:
+        {'insterted': 5000, 'total': 5000}
+    """
+
+    # Handle empty dataframe
+    if df.empty:
+        logger.warning(f'No data to load into {table}')
+        return {'inserted': 0, 'total': 0}
+    
+    # Get column names from DataFrame
+    columns = df.columns.tolist()
+    cols_sql = ', '.join(columns)
+
+    # Build placeholders for parameterized query (%s is PostgreSQL placeholder)
+    placeholders = ', '.join(['%s'] * len(columns))
+
+    #  Build INSERT SQL query
+    query = f"INSERT INTO {table} ({cols_sql}) VALUES ({placeholders})"
+
+    total_rows = len(df)
+    rows_processed = 0
+
+    logger.info(f'Loading {total_rows} rows into {table} (batch size: {batch_size})')
+
+    # Use context manager to handle DB connection
+    with get_db_connection(db_url) as conn:
+        with conn.cursor() as cursor:
+            # Process in batches to avoid memory issues
+            for start_idx in range(0, total_rows, batch_size):
+                end_idx = min(start_idx + batch_size, total_rows)
+                batch_df = df.iloc[start_idx:end_idx]
+
+                # Convert DataFrame rows to list of tuples
+                rows = [tuple(row) for row in batch_df.values]
+
+                # Execute batch insert
+                cursor.executemany(query, rows)
+
+                rows_processed += len(rows)
+                logger.info(f'Loaded batch: {rows_processed}/{total_rows} rows')
+                logger.info(f'Successfully loaded {rows_processed} rows into {table}')
+    
+    return {'inserted': rows_processed, 'total': total_rows}
