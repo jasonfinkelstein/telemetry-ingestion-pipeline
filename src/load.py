@@ -60,6 +60,7 @@ def get_db_connection(db_url: str):
 def load_dataframe(
         df: pd.DataFrame,
         table: str,
+        primary_keys: List[str],
         db_url: str,
         batch_size: int = 5000
 ) -> dict:
@@ -95,8 +96,20 @@ def load_dataframe(
     # Build placeholders for parameterized query (%s is PostgreSQL placeholder)
     placeholders = ', '.join(['%s'] * len(columns))
 
-    #  Build INSERT SQL query
-    query = f"INSERT INTO {table} ({cols_sql}) VALUES ({placeholders})"
+    # Build UPSERT query if primary keys exist
+    if primary_keys:
+        pk_conflict = ', '.join(primary_keys)
+        update_cols = [col for col in columns if col not in primary_keys]
+        update_set = ', '.join([f"{col} = EXCLUDED.{col}" for col in update_cols])
+
+        query = f"""
+            INSERT INTO {table} ({cols_sql})
+            VALUES ({placeholders})
+            ON CONFLICT ({pk_conflict})
+            DO UPDATE SET {update_set}
+        """
+    else:
+        query = f"INSERT INTO {table} ({cols_sql}) VALUES ({placeholders})"
 
     total_rows = len(df)
     rows_processed = 0
@@ -163,13 +176,22 @@ def write_rejects(
             """
             # Prepare rows for insertion
             # psycopg.types.json.Json() converts python dict to PostgreSQL JSONB
-            rows = [
-                (
+            rows = []
+
+            for reject in rejects:
+                # Convert pandas Timestamps to strings for JSON serialization
+                data_copy = {}
+                for key, value in reject['data'].items():
+                    if hasattr(value, 'isoformat'):  # Check if it's a datetime-like object
+                        data_copy[key] = value.isoformat()
+                    else:
+                        data_copy[key] = value
+                
+                rows.append((
                     source_name,
-                    psycopg.types.json.Json(reject['data']), reject['reason']
-                )
-                for reject in rejects
-            ]
+                    psycopg.types.json.Json(data_copy),
+                    reject['reason']
+                ))
 
             # Insert all rejects in one batch
             cursor.executemany(query, rows)

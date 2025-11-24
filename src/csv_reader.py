@@ -34,8 +34,13 @@ def read_csv(file_path: str, **kwargs) -> pd.DataFrame:
         # pandas.read_csv reads the entire CSV into memory and returns a DataFrame
         df = pd.read_csv(path, **kwargs)
 
+        if 'Unnamed: 0' in df.columns:
+            df = df.rename(columns={'Unnamed: 0': 'record_id'})
+            logger.info("Renamed 'Unnamed: 0' column to 'record_id")
+
         logger.info(f"Successfully read CSV file: {file_path} with {len(df)} records.")
         return df
+    
     except Exception as e:
         # Log the error with details
         logger.error(f"Error reading CSV file {file_path}: {str(e)}")

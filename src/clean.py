@@ -35,8 +35,10 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
         # strip whitespace
         normalized = str(col).strip()
 
-        # convert camelCase to snake_case by inserting underscores before uppercase letters
-        normalized = re.sub(r'(?<!^)(?=[A-Z])', '_', normalized).lower()
+        if normalized.isupper(): # Check is col is all caps (e.g. RPM, DRS)
+            normalized = normalized.lower()
+        else: # Handles camelCase
+            normalized = re.sub(r'(?<!^)(?=[A-Z])', '_', normalized).lower()
 
         normalized_cols.append(normalized)
     

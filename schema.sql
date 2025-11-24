@@ -3,8 +3,8 @@ DROP TABLE IF EXISTS stg_telemetry CASCADE;
 DROP TABLE IF EXISTS stg_rejects CASCADE;
 
 -- Main telemetry data table
-CREATE TABLE stg_telemetry (
-    id SERIAL PRIMARY KEY, -- Unique identifier for each record
+CREATE TABLE IF NOT EXISTS stg_telemetry (
+    record_id BIGINT PRIMARY KEY, -- Unique identifier for each record
     date TIMESTAMP NOT NULL, -- Timestamps for each recorded data point
     rpm INTEGER NOT NULL CHECK (rpm >= 0), -- Engine revolutions per minute, indicating engine performance and power delivery
     speed INTEGER NOT NULL CHECK (speed >= 0), -- Car speed measured in kilometers per hour, reflecting acceleration and straight-line performance

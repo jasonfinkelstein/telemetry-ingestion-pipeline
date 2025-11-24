@@ -1,5 +1,6 @@
 import logging
 import time
+import re
 from pathlib import Path
 from typing import Dict, Any
 from config import Config
@@ -8,6 +9,7 @@ from validate import apply_schema
 from rules import apply_rules
 from clean import normalize_columns, trim_strings
 from load import load_dataframe, write_rejects
+
 
 # Configure logging
 logging.basicConfig(
@@ -80,7 +82,17 @@ def run_telemetry_ingestion(source_config: Dict[str, Any], db_url: str) -> Dict[
         # Step 4: Apply schema (type casting)
         logger.info('Step 4/6: Applying validation schema and type casting')
         all_rejects = [] # to collect all rejects
-        df, schema_rejects = apply_schema(df, source_config['schema'])
+
+        # Normalize schema column names to match normalized DataFrame columns
+        normalized_schema = {}
+        for col, dtype in source_config['schema'].items():
+            if col.isupper():
+                normalized_col = col.lower()
+            else:
+                normalized_col = re.sub(r'(?<!^)(?=[A-Z])', '_', col).lower()
+            normalized_schema[normalized_col] = dtype
+
+        df, schema_rejects = apply_schema(df, normalized_schema)
         all_rejects.extend(schema_rejects)
 
         # Step 5: Apply validation rules
@@ -100,6 +112,7 @@ def run_telemetry_ingestion(source_config: Dict[str, Any], db_url: str) -> Dict[
         load_stats = load_dataframe(
             df=df,
             table=source_config['target_table'],
+            primary_keys=source_config.get('pk', []),
             db_url=db_url,
             batch_size=source_config.get('batch_size', 5000)
         )
