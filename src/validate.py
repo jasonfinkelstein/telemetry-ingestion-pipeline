@@ -113,7 +113,7 @@ def apply_schema(
     # Process each column in the schema
     for col, dtype in schema.items():
         if col not in df.columns:
-            logger.warning(f"Schema column {col} nor found in CSV data")
+            logger.warning(f"Schema column '{col}' not found in CSV data")
             continue
 
         logger.info(f"Casting colum '{col}' to type '{dtype}'")
@@ -138,6 +138,16 @@ def apply_schema(
                 })
     # Create DataFrame with only valid rows
     valid_df = df.loc[list(valid_indices)].copy()
+
+    # Convert column dtypes explicitly for valid rows
+    for col, dtype in schema.items():
+        if col in valid_df.columns:
+            if dtype == 'int':
+                valid_df[col] = valid_df[col].astype('int64')
+            elif dtype == 'float':
+                valid_df[col] = valid_df[col].astype('float64')
+            elif dtype == 'bool':
+                valid_df[col] = valid_df[col].astype('bool')
 
     logger.info(f"Schema validation: {len(valid_df)} valid, {len(rejects)} rejected")
 
