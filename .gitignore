@@ -7,3 +7,7 @@ __pycache__/
 .coverage
 htmlcov/
 .DS_Store
+ex.md
+test_smoke.py
+data/verstappen_telemetry_miami_2024(test_data).csv
+test_rules_debug.py
