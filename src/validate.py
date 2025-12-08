@@ -9,18 +9,11 @@ logger = logging.getLogger(__name__)
 def parse_timedelta(value):
     """
     Parse time delta string in format '0 days HH:MM:SS.ffffff'
-    Args:
-        value (str): String representation of time duration
-    
-    Returns:
-        pandas.Timedelta object or original value if already a timedelta
     """
-    # Handle missing values
     if pd.isna(value):
         return value
     
     try:
-        # built into pandas
         if isinstance(value, pd.Timedelta):
             return value
         
@@ -34,22 +27,10 @@ def parse_timedelta(value):
 
         raise ValueError(f"Could not parse timedelta from value '{value}': {str(e)}")
 
-def cast_to_type(value, target_type: str):
+def cast_to_type(value, target_type):
     """
-    Cast a single value to the specified target type.
-
-    Args:
-        value: The value to be cast.
-        target_type (str): The target type as a string. ('int', 'float', 'str', 'bool', 'timedelta').
-
-    Returns:
-        The value cast to the target type.
-
-    Raises:
-        ValueError: If the target type is unsupported or casting fails.
+    Cast value to target type
     """
-
-    # Missing values stay missing
     if pd.isna(value):
         return value
     
@@ -86,31 +67,14 @@ def cast_to_type(value, target_type: str):
         raise ValueError(f"Could not cast value '{value}' to type '{target_type}': {str(e)}")
     
 
-def apply_schema(
-        df: pd.DataFrame,
-        schema: Dict[str, str]
-    ) -> Tuple[pd.DataFrame, List[dict]]:
+def apply_schema(df,schema):
     """
-    Apply schema to DataFrame, casting columns to specified types.
-    This func processes the entire DataFrame:
-    1. Goes through each column in the schema.
-    2. Tries to convert each value to the target type.
-    3. If converstion fails, marks that row as rejected
-    4. Returns valid rows and rejected rows separately.
-
-    Args:
-        df: Input DataFrame from CSV
-        schema: Dict mapping column names to target types (e.g. {{'RPM': 'int', 'Speed': 'int', 'Brake': 'bool'})
-
-    Returns:
-        Tuple containing:
-            - DataFrame with valid rows cast to target types
-            - List of dicts with rejected rows and error reasons
+    Apply schema casting and collect rejects
     """
-    rejects = [] # Will hold all rejected rows
-    valid_indices = set(df.index) # Track which rows are still valid
+    rejects = []
+    valid_indices = set(df.index)
 
-    # Process each column in the schema
+    # TODO: optimize for larger datasets
     for col, dtype in schema.items():
         if col not in df.columns:
             logger.warning(f"Schema column '{col}' not found in CSV data")

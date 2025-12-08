@@ -5,24 +5,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 def apply_rules(
-        df: pd.DataFrame,
-        rules: List[Dict[str, str]]
-) -> Tuple[pd.DataFrame, List[Dict]]:
+        df,
+        rules
+):
     """
-    Apply validation rules to DataFrame using pandas queries.
-
-    Rules are written in pandas query syntax:
-    - "RPM >= 0" checks that RPM values are non-negative
-    - "Speed <= 400" checks if speed is within realistic limits
-    - "Throttle >= 0" and "Throttle <= 100" checks throttle percentage
-
-    Args:
-        df: DataFrame with typed data (after schema application)
-        rules: List of rule dictionaries from config
-            Format: [{'rule': 'RPM >= 0', 'message': 'RPM must be positive'}]
-
-    Returns:
-        Tuple of (valid DataFrame, list of rejected records)
+    Apply validation rules and filter invalid rows
     """
 
     # Handle edge cases
@@ -34,7 +21,7 @@ def apply_rules(
     # Track which rows pass all rules
     valid_mask = pd.Series([True] * len(df), index=df.index)
 
-    # Apply each rule sequentially
+    # Apply each rule one by one
     for rule_config in rules:
         rule_expr = rule_config.get('rule', '')
         message = rule_config.get('message', f'Failed rule: {rule_expr}')
@@ -43,14 +30,11 @@ def apply_rules(
             logger.info(f"Applying rule: {rule_expr}")
 
             # Evaluate the rule expression
-            # df.eval() runs the expression on the entire DataFrame and returns a boolean Series (True/False per row)
             rule_result = df.eval(rule_expr)
 
             # Find rows that FAIL this rule (False values)
-            # elementwise logical NOT using Python's 'not' via map
-            # failed_mask = ~rule_result # ~ is deprecated
-            failed_mask = rule_result.map(lambda v: not v)
-            failed_indices = df[failed_mask].index
+            fail_mask = rule_result.map(lambda v: not v)
+            failed_indices = df[fail_mask].index
 
             # Mark failed rows as rejected
             for idx in failed_indices:
@@ -61,7 +45,7 @@ def apply_rules(
                         'data': df.loc[idx].to_dict(),
                         'reason': message
                     })
-            logger.info(f"Rule '{rule_expr}': {failed_mask.sum()} rows failed")
+            logger.info(f"Rule '{rule_expr}': {fail_mask.sum()} rows failed")
 
         except Exception as e:
             # If rule syntax is bad, log error but continue with other rules

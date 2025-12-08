@@ -9,9 +9,9 @@ load_dotenv()
 
 class Config:
     """
-    Config manager for the data ingestion system. Loads database credentials from .env and source definitions from YAML file.
+    Configuration manager
     """
-    def __init__(self, config_path: str = "config/sources.yml"):
+    def __init__(self, config_path = "config/sources.yml"):
         self.config_path = Path(config_path)
         self.config_data = self._load_config()
 
@@ -22,24 +22,23 @@ class Config:
         self.db_user = os.getenv("DB_USER", "postgres")
         self.db_password = os.getenv("DB_PASSWORD", "")
     
-    def _load_config(self) -> Dict[str, Any]:
-        """Load and parse the YAML configuration file."""
+    def _load_config(self):
         if not self.config_path.exists():
             raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
         
         with open(self.config_path, 'r') as f:
             return yaml.safe_load(f)
     
-    def get_db_url(self) -> str:
-        """Build the database connection URL from credentials."""
+    def get_db_url(self):
+        """Build the database connection URL from credentials"""
         return (f"postgresql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}")
     
-    def get_sources(self) -> list:
-        """Get the list of data sources from the configuration."""
+    def get_sources(self):
+        """Get list of data sources from the config"""
         return self.config_data.get("sources", [])
     
-    def get_source_by_name(self, name: str) -> Dict [str, Any]:
-        """Get a specific data source config by name"""
+    def get_source_by_name(self, name):
+        """Get a data source config by name"""
         sources = self.get_sources()
         for source in sources:
             if source['name'] == name:

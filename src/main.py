@@ -23,31 +23,15 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-def run_telemetry_ingestion(source_config: Dict[str, Any], db_url: str) -> Dict[str, Any]:
+def run_telemetry_ingestion(source_config, db_url):
     """
-    Run the complete ingestion pipeline for one data source.
-
-    Steps:
-    1. Read CSV file
-    2. Normalize column names
-    3. Clean data (trim strings)
-    4. Apply schema (type casting)
-    5. Apply validation rules
-    6. Load valid data into database
-    7. Write rejects to database
-
-    Args:
-        source_config: Configuration dictionary for the data source
-        db_url: PostgreSQL connection string
-
-    Returns:
-        Dict with ingestion statistics
+    Run the complete ingestion pipeline for a data source
     """
 
     source_name = source_config['name']
     start_time = time.time()
 
-    # Print banner
+    # banner for better readability
     logger.info('=' * 80)
     logger.info(f'Starting ingestion for source: {source_name}')
     logger.info('=' * 80)
@@ -65,23 +49,19 @@ def run_telemetry_ingestion(source_config: Dict[str, Any], db_url: str) -> Dict[
     }
 
     try:
-        # Step 1: Read CSV file
         logger.info(f"Step 1/6: Reading CSV file: {source_config['path']}")
         df = read_csv(source_config['path'])
         stats['rows_read'] = len(df)
         logger.info(f'Read {len(df)} rows from CSV')
 
-        # Step 2: Normalize column names
         logger.info('Step 2/6: Normalizing column names for database')
         df = normalize_columns(df)
 
-        # Step 3: Clean data (trim strings)
         logger.info('Step 3/6: Cleaning data (trimming strings)')
         df = trim_strings(df)
 
-        # Step 4: Apply schema (type casting)
         logger.info('Step 4/6: Applying validation schema and type casting')
-        all_rejects = [] # to collect all rejects
+        all_rejects = [] # to collect rejects
 
         # Normalize schema column names to match normalized DataFrame columns
         normalized_schema = {}
@@ -95,7 +75,6 @@ def run_telemetry_ingestion(source_config: Dict[str, Any], db_url: str) -> Dict[
         df, schema_rejects = apply_schema(df, normalized_schema)
         all_rejects.extend(schema_rejects)
 
-        # Step 5: Apply validation rules
         if 'rules' in source_config:
             logger.info('Step 5/6: Applying validation rules')
             df, rule_rejects = apply_rules(df, source_config['rules'])
@@ -107,7 +86,6 @@ def run_telemetry_ingestion(source_config: Dict[str, Any], db_url: str) -> Dict[
         stats['rows_valid'] = len(df)
         stats['rows_rejected'] = len(all_rejects)
 
-        # Step 6: Load valid data into database
         logger.info(f'Step 6/6: Loading {len(df)} valid records into {source_config["target_table"]}')
         load_stats = load_dataframe(
             df=df,
@@ -118,12 +96,11 @@ def run_telemetry_ingestion(source_config: Dict[str, Any], db_url: str) -> Dict[
         )
         stats['rows_loaded'] = load_stats['total']
 
-        # Write rejects to database
+        # Write rejects
         if all_rejects:
             logger.info(f"Writing {len(all_rejects)} rejected records")
             write_rejects(all_rejects, source_name, db_url)
 
-        # Mark as successful
         stats['status'] = 'success'
 
     except Exception as e:
@@ -134,10 +111,8 @@ def run_telemetry_ingestion(source_config: Dict[str, Any], db_url: str) -> Dict[
         raise # re-raise after logging so caller knows
 
     finally: 
-        # Always calculate duration and print summary
         stats['duration_seconds'] = round(time.time() - start_time, 2)
 
-        # Print summary
         logger.info('=' * 80)
         logger.info(f'Ingestion summary for source: {source_name}')
         logger.info(f"Status: {stats['status']}")
@@ -153,23 +128,14 @@ def run_telemetry_ingestion(source_config: Dict[str, Any], db_url: str) -> Dict[
     return stats
 
 
-def run_all_sources(config_path: str = "config/sources.yml"):
+def run_all_sources(config_path = "config/sources.yml"):
     """
-    Run ingestion for all configured sources.
-
-    This is the main entry point:
-    1. Loads configuration
-    2. Gets all data sources
-    3. Processes each source
-    4. Prints overall summary
-
-    Args:
-        config_path: Path to configuration YAML file
+    Run ingestion for all configured sources
     """
 
     logger.info('Starting ingestion pipeline')
 
-    # Load configuration
+    # Load config
     config = Config(config_path)
     db_url = config.get_db_url()
     sources = config.get_sources()
