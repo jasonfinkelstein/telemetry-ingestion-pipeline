@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 @contextmanager
 def get_db_connection(db_url: str):
     """
-    Context manager for database connections.
+    Context manager for database connections
 
     Usage:
         with get_db_connection(db_url) as conn:
@@ -25,7 +25,7 @@ def get_db_connection(db_url: str):
     Args:
         db_url: PostgreSQL connection string
 
-    Yields:
+    Returns:
         psycopg Connection object    
     """
 
