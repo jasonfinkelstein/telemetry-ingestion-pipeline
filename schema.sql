@@ -1,9 +1,9 @@
 -- Drop tables if they exist (starting fresh)
-DROP TABLE IF EXISTS stg_telemetry CASCADE;
-DROP TABLE IF EXISTS stg_rejects CASCADE;
+DROP TABLE IF EXISTS silver_telemetry CASCADE;
+DROP TABLE IF EXISTS silver_rejects CASCADE;
 
 -- Main telemetry data table
-CREATE TABLE IF NOT EXISTS stg_telemetry (
+CREATE TABLE IF NOT EXISTS silver_telemetry (
     record_id BIGINT PRIMARY KEY, -- Unique identifier for each record
     date TIMESTAMP NOT NULL, -- Timestamps for each recorded data point
     rpm INTEGER NOT NULL CHECK (rpm >= 0), -- Engine revolutions per minute, indicating engine performance and power delivery
@@ -19,12 +19,12 @@ CREATE TABLE IF NOT EXISTS stg_telemetry (
 );
 
 -- Indexes for faster querying
-CREATE INDEX idx_stg_telemetry_date ON stg_telemetry(date);
-CREATE INDEX idx_stg_telemetry_speed ON stg_telemetry(speed);
-CREATE INDEX idx_stg_telemetry_rpm ON stg_telemetry(rpm);
+CREATE INDEX idx_silver_telemetry_date ON silver_telemetry(date);
+CREATE INDEX idx_silver_telemetry_speed ON silver_telemetry(speed);
+CREATE INDEX idx_silver_telemetry_rpm ON silver_telemetry(rpm);
 
 -- Table for rejected records
-CREATE TABLE stg_rejects (
+CREATE TABLE silver_rejects (
     id SERIAL PRIMARY KEY, -- Unique identifier for each rejected record
     source_name TEXT NOT NULL, -- Name of the source file
     raw_payload JSONB NOT NULL, -- The actual invalid data
@@ -32,6 +32,6 @@ CREATE TABLE stg_rejects (
     rejected_at TIMESTAMP NOT NULL DEFAULT NOW() -- Timestamp of rejection
 );
 
-CREATE INDEX idx_rejects_source ON stg_rejects(source_name);
+CREATE INDEX idx_rejects_source ON silver_rejects(source_name);
 
 -- End of schema.sql

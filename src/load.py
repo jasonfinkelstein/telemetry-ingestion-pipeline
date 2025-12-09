@@ -105,7 +105,7 @@ def write_rejects(
         db_url
 ):
     """
-    Write rejected records to stg_rejects table
+    Write rejected records to silver_rejects table
     """
 
     if not rejects:
@@ -118,7 +118,7 @@ def write_rejects(
         with conn.cursor() as cursor:
             # Query to insert rejects
             query = """
-                INSERT INTO stg_rejects (source_name, raw_payload, reason)
+                INSERT INTO silver_rejects (source_name, raw_payload, reason)
                 VALUES (%s, %s, %s)
             """
             rows = []

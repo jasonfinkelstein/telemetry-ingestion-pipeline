@@ -7,7 +7,7 @@ sources:
   - name: verstappen_telemetry_miami_2024
     type: csv
     path: data/verstappen_telemetry_miami_2024.csv
-    target_table: stg_telemetry
+    target_table: silver_telemetry
     pk: [record_id]
 
 # Column types:
