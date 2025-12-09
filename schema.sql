@@ -19,9 +19,9 @@ CREATE TABLE IF NOT EXISTS silver_telemetry (
 );
 
 -- Indexes for faster querying
-CREATE INDEX idx_silver_telemetry_date ON silver_telemetry(date);
-CREATE INDEX idx_silver_telemetry_speed ON silver_telemetry(speed);
-CREATE INDEX idx_silver_telemetry_rpm ON silver_telemetry(rpm);
+CREATE INDEX idx_telemetry_date ON silver_telemetry(date);
+CREATE INDEX idx_telemetry_speed ON silver_telemetry(speed);
+CREATE INDEX idx_telemetry_rpm ON silver_telemetry(rpm);
 
 -- Table for rejected records
 CREATE TABLE silver_rejects (
